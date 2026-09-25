@@ -35,11 +35,24 @@ class RepositoryException implements Exception {
   String toString() => message;
 }
 
-// Replace with API/database implementation at the app composition root.
+abstract interface class PersistentSessionRepository {
+  Future<Session?> restoreSession();
+  Stream<bool> get sessionChanges;
+}
+
 abstract interface class AssocRepository {
   Future<Session> login(String email, String password);
   Future<void> logout();
   Future<MemberData> getMemberData();
   Future<Registration> submitRegistration(Registration registration);
   Future<List<PublicLocation>> getPublicLocations();
+}
+
+class SessionExpiredException extends RepositoryException {
+  const SessionExpiredException()
+    : super("Your session expired. Please sign in again.");
+}
+
+class AccessRevokedException extends RepositoryException {
+  const AccessRevokedException(super.message);
 }

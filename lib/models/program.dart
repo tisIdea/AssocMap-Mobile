@@ -1,6 +1,7 @@
 class ProjectMaterial {
   final String id, name, unit, status;
-  final double quantity, unitCost;
+  final double quantity;
+  final double? unitCost;
   final DateTime? deliveryDate;
   const ProjectMaterial({
     required this.id,
@@ -15,7 +16,7 @@ class ProjectMaterial {
 
 class Project {
   final String id, associationId, title, commodity, component, status;
-  final DateTime implementationDate;
+  final DateTime? implementationDate;
   final List<ProjectMaterial> materials;
   const Project({
     required this.id,
@@ -36,8 +37,8 @@ class TrainingParticipant {
 
 class Training {
   final String id, associationId, title, component;
-  final DateTime date;
-  final double cost;
+  final DateTime? date;
+  final double? cost;
   final List<TrainingParticipant> participants;
   const Training({
     required this.id,

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../controllers/app_controller.dart';
-import '../../repositories/mock_assoc_repository.dart';
 import '../public_map_screen.dart';
 import '../../theme/app_theme.dart';
 
@@ -91,6 +90,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(fontSize: 17, color: AppColors.grayText),
                     ),
                     const SizedBox(height: 36),
+                    if (widget.controller.error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Text(
+                          widget.controller.error!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                      ),
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -165,25 +174,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       label: const Text('Explore public map'),
                     ),
                     const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.lightBlue,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Temporary testing account',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          SizedBox(height: 6),
-                          Text('Email: ${MockAssocRepository.demoEmail}'),
-                          Text('Password: ${MockAssocRepository.demoPassword}'),
-                        ],
-                      ),
-                    ),
                     const SizedBox(height: 20),
                     const Text(
                       'Accounts are provisioned by the system administrator. Self-registration is not available.',

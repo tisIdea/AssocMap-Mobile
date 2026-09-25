@@ -104,7 +104,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                             child: ListTile(
                               title: Text(m.name),
                               subtitle: Text(
-                                '${m.quantity} ${m.unit} • PHP ${m.unitCost.toStringAsFixed(2)} / unit\n${m.status} • Delivery: ${dateLabel(m.deliveryDate)}',
+                                '${m.quantity} ${m.unit} • PHP ${m.unitCost?.toStringAsFixed(2) ?? 'Not recorded'} / unit\n${m.status} • Delivery: ${dateLabel(m.deliveryDate)}',
                               ),
                             ),
                           ),
@@ -135,7 +135,8 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                         'Training': t.title,
                         'Component': t.component,
                         'Date conducted': dateLabel(t.date),
-                        'Training cost': 'PHP ${t.cost.toStringAsFixed(2)}',
+                        'Training cost':
+                            'PHP ${t.cost?.toStringAsFixed(2) ?? 'Not recorded'}',
                         'Present':
                             '${t.participants.where((p) => p.attendance == 'Present').length} / ${t.participants.length}',
                       },

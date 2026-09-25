@@ -121,7 +121,7 @@ class _RegisterMemberScreenState extends State<RegisterMemberScreen> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Please check the applicant?s details. Your Field Officer will review the registration before membership is confirmed.',
+                  'Please check the applicant details. Your Field Officer will review the registration before membership is confirmed.',
                 ),
               ),
             ],
@@ -134,12 +134,14 @@ class _RegisterMemberScreenState extends State<RegisterMemberScreen> {
             children: [
               TextFormField(
                 controller: _firstNameController,
+                maxLength: 255,
                 decoration: const InputDecoration(labelText: 'First name'),
                 validator: _required,
               ),
               const SizedBox(height: 14),
               TextFormField(
                 controller: _middleNameController,
+                maxLength: 255,
                 decoration: const InputDecoration(
                   labelText: 'Middle name (optional)',
                 ),
@@ -147,6 +149,7 @@ class _RegisterMemberScreenState extends State<RegisterMemberScreen> {
               const SizedBox(height: 14),
               TextFormField(
                 controller: _lastNameController,
+                maxLength: 255,
                 decoration: const InputDecoration(labelText: 'Last name'),
                 validator: _required,
               ),
@@ -232,66 +235,71 @@ class PendingScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Registration Submitted')),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 84,
-                height: 84,
-                decoration: const BoxDecoration(
-                  color: AppColors.lightBlue,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle_outline,
-                  color: AppColors.primaryBlue,
-                  size: 54,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Registration Submitted',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                '${registration.fullName} has been submitted for review.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: AppColors.grayText, fontSize: 16),
-              ),
-              const SizedBox(height: 22),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade50,
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Text(
-                  'PENDING',
-                  style: TextStyle(
-                    color: Colors.orange.shade800,
-                    fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 84,
+                  height: 84,
+                  decoration: const BoxDecoration(
+                    color: AppColors.lightBlue,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_outline,
+                    color: AppColors.primaryBlue,
+                    size: 54,
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'The official member list is not changed until the Field Officer reviews the application.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.grayText, fontSize: 13),
-              ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Back to Registration'),
-              ),
-            ],
+                const SizedBox(height: 24),
+                const Text(
+                  'Registration Submitted',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '${registration.fullName} has been submitted for review.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: AppColors.grayText,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Text(
+                    'PENDING',
+                    style: TextStyle(
+                      color: Colors.orange.shade800,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'The official member list is not changed until the Field Officer reviews the application.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.grayText, fontSize: 13),
+                ),
+                const SizedBox(height: 30),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Back to Registration'),
+                ),
+              ],
+            ),
           ),
         ),
       ),

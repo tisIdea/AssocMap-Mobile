@@ -29,6 +29,27 @@ class _MemberDashboardState extends State<MemberDashboard> {
         title: const Text('AssocMap'),
         actions: [
           IconButton(
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              try {
+                await controller.logout();
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        e is RepositoryException
+                            ? e.message
+                            : 'Logout failed. Please retry.',
+                      ),
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          IconButton(
             tooltip: 'Public map',
             icon: const Icon(Icons.public),
             onPressed: () => Navigator.push(
@@ -42,7 +63,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
           IconButton(
             tooltip: 'Refresh',
             icon: const Icon(Icons.refresh),
-            onPressed: controller.loading ? null : controller.refresh,
+            onPressed: controller.refreshing ? null : controller.refresh,
           ),
         ],
       ),
@@ -52,7 +73,7 @@ class _MemberDashboardState extends State<MemberDashboard> {
             constraints: const BoxConstraints(maxWidth: 840),
             child: controller.loading
                 ? const Center(child: CircularProgressIndicator())
-                : controller.error != null
+                : controller.error != null && data == null
                 ? Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -80,33 +101,69 @@ class _MemberDashboardState extends State<MemberDashboard> {
                       ProfileScreen(
                         user: controller.session!,
                         associationName: data.association.name,
-                        onLogout: controller.logout,
+                        onLogout: () async {
+                          try {
+                            await controller.logout();
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    e is RepositoryException
+                                        ? e.message
+                                        : 'Logout failed. Please retry.',
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
                       ),
                     ],
                   ),
           ),
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: selected,
-        onDestinationSelected: (i) => setState(() => selected = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            label: 'Members',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.work_outline),
-            label: 'Programs',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_add_alt),
-            label: 'Register',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.account_circle_outlined),
-            label: 'Profile',
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (controller.error != null && data != null)
+            MaterialBanner(
+              content: Text(
+                '${controller.error!} Showing the last loaded records.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: controller.refreshing ? null : controller.refresh,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          NavigationBar(
+            selectedIndex: selected,
+            onDestinationSelected: (i) => setState(() => selected = i),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.people_outline),
+                label: 'Members',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.work_outline),
+                label: 'Programs',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_add_alt),
+                label: 'Register',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.account_circle_outlined),
+                label: 'Profile',
+              ),
+            ],
           ),
         ],
       ),
@@ -197,7 +254,7 @@ class _HomeTab extends StatelessWidget {
       ),
       const SizedBox(height: 24),
       const Text(
-        'Demo environment - Fictional records. Changes reset when the app restarts.',
+        'Use Refresh to retrieve the latest shared association records.',
         style: TextStyle(color: AppColors.grayText, fontSize: 12),
       ),
     ],

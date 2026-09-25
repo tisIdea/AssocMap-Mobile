@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/program.dart';
 import '../repositories/assoc_repository.dart';
 import '../widgets/record_details.dart';
@@ -12,8 +15,10 @@ class PublicMapScreen extends StatefulWidget {
 
 class _PublicMapScreenState extends State<PublicMapScreen> {
   late Future<List<PublicLocation>> locations;
-  final transformation = TransformationController();
-  String query = '', municipality = 'All', commodity = 'All';
+  final mapController = MapController();
+  String query = '', municipality = 'All', program = 'All';
+  bool tilesUnavailable = false;
+  int tileAttempt = 0;
   @override
   void initState() {
     super.initState();
@@ -22,7 +27,7 @@ class _PublicMapScreenState extends State<PublicMapScreen> {
 
   @override
   void dispose() {
-    transformation.dispose();
+    mapController.dispose();
     super.dispose();
   }
 
@@ -36,8 +41,10 @@ class _PublicMapScreenState extends State<PublicMapScreen> {
           'Association': location.associationName,
           'Area': '${location.barangay}, ${location.municipality}, Cebu',
           'Program': location.program,
-          'Commodity': location.commodity,
-          'Activities': location.activities,
+          if (location.commodity != 'Not published')
+            'Commodity': location.commodity,
+          if (location.activities != 'Not published')
+            'Activities': location.activities,
           'Latitude': location.latitude.toStringAsFixed(6),
           'Longitude': location.longitude.toStringAsFixed(6),
         },
@@ -75,7 +82,7 @@ class _PublicMapScreenState extends State<PublicMapScreen> {
               .where(
                 (p) =>
                     (municipality == 'All' || municipality == p.municipality) &&
-                    (commodity == 'All' || commodity == p.commodity) &&
+                    (program == 'All' || program == p.program) &&
                     '${p.name} ${p.associationName} ${p.program} ${p.activities}'
                         .toLowerCase()
                         .contains(query.toLowerCase()),
@@ -107,6 +114,7 @@ class _PublicMapScreenState extends State<PublicMapScreen> {
                       SizedBox(
                         width: 200,
                         child: DropdownButtonFormField<String>(
+                          isExpanded: true,
                           initialValue: municipality,
                           decoration: const InputDecoration(
                             labelText: 'Municipality',
@@ -126,89 +134,133 @@ class _PublicMapScreenState extends State<PublicMapScreen> {
                       SizedBox(
                         width: 200,
                         child: DropdownButtonFormField<String>(
-                          initialValue: commodity,
+                          isExpanded: true,
+                          initialValue: program,
                           decoration: const InputDecoration(
-                            labelText: 'Commodity',
+                            labelText: 'Program',
                           ),
-                          items: ['All', ...all.map((p) => p.commodity).toSet()]
+                          items: ['All', ...all.map((p) => p.program).toSet()]
                               .map(
                                 (s) =>
                                     DropdownMenuItem(value: s, child: Text(s)),
                               )
                               .toList(),
-                          onChanged: (s) => setState(() => commodity = s!),
+                          onChanged: (s) => setState(() => program = s!),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Offline coordinate preview • Fictional sites, no live basemap. Pinch to zoom and drag to pan.',
-                    style: TextStyle(fontSize: 12),
+                  Text(
+                    '${visible.length} published ${visible.length == 1 ? 'location' : 'locations'}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 320,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          return InteractiveViewer(
-                            transformationController: transformation,
-                            minScale: 1,
-                            maxScale: 5,
-                            child: SizedBox(
-                              width: constraints.maxWidth,
-                              height: 320,
-                              child: Stack(
-                                children: [
-                                  const Positioned.fill(
-                                    child: CustomPaint(
-                                      painter: _CoordinateGrid(),
-                                    ),
-                                  ),
-                                  ...visible.map(
-                                    (p) => Positioned(
-                                      left:
-                                          ((p.longitude - 123.92) / 0.06) *
-                                              constraints.maxWidth -
-                                          24,
-                                      top:
-                                          ((10.28 - p.latitude) / 0.06) * 320 -
-                                          24,
-                                      child: IconButton(
-                                        tooltip: p.name,
-                                        onPressed: () => details(p),
-                                        iconSize: 36,
-                                        icon: Icon(
-                                          Icons.location_on,
-                                          color: p.commodity == 'Bangus'
-                                              ? Colors.blue.shade800
-                                              : Colors.teal.shade800,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                  TextButton(
+                    onPressed: () async {
+                      try {
+                        final opened = await launchUrl(
+                          Uri.parse('https://www.openstreetmap.org/copyright'),
+                        );
+                        if (!opened) {
+                          throw StateError('Cannot open attribution');
+                        }
+                      } catch (_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Open openstreetmap.org/copyright to view attribution.',
                               ),
                             ),
                           );
-                        },
+                        }
+                      }
+                    },
+                    child: const Text(
+                      'Map data \u00a9 OpenStreetMap contributors',
+                    ),
+                  ),
+                  if (tilesUnavailable)
+                    Column(
+                      children: [
+                        const Text(
+                          'The base map could not load. Published location markers and details are still available.',
+                        ),
+                        TextButton(
+                          onPressed: () => setState(() {
+                            tilesUnavailable = false;
+                            tileAttempt++;
+                          }),
+                          child: const Text('Retry base map'),
+                        ),
+                      ],
+                    ),
+                  SizedBox(
+                    height: 320,
+                    child: FlutterMap(
+                      mapController: mapController,
+                      options: MapOptions(
+                        initialCenter: visible.isEmpty
+                            ? const LatLng(10.3, 123.8)
+                            : LatLng(
+                                visible.first.latitude,
+                                visible.first.longitude,
+                              ),
+                        initialZoom: 10,
                       ),
+                      children: [
+                        TileLayer(
+                          key: ValueKey(tileAttempt),
+                          evictErrorTileStrategy:
+                              EvictErrorTileStrategy.dispose,
+                          errorTileCallback: (_, error, stack) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted && !tilesUnavailable) {
+                                setState(() => tilesUnavailable = true);
+                              }
+                            });
+                          },
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'org.assocmap.mobile',
+                        ),
+                        MarkerLayer(
+                          markers: visible
+                              .map(
+                                (p) => Marker(
+                                  point: LatLng(p.latitude, p.longitude),
+                                  width: 48,
+                                  height: 48,
+                                  child: IconButton(
+                                    tooltip: p.name,
+                                    onPressed: () => details(p),
+                                    icon: const Icon(
+                                      Icons.location_on,
+                                      color: Colors.blue,
+                                      size: 36,
+                                    ),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
                     ),
                   ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton.icon(
-                      onPressed: () =>
-                          transformation.value = Matrix4.identity(),
-                      icon: const Icon(Icons.center_focus_strong),
-                      label: const Text('Reset view'),
-                    ),
-                  ),
-                  Text(
-                    '${visible.length} published locations',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  TextButton.icon(
+                    onPressed: () {
+                      if (visible.isNotEmpty) {
+                        mapController.move(
+                          LatLng(
+                            visible.first.latitude,
+                            visible.first.longitude,
+                          ),
+                          10,
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.center_focus_strong),
+                    label: const Text('Reset view'),
                   ),
                   if (visible.isEmpty)
                     const Padding(
@@ -222,7 +274,7 @@ class _PublicMapScreenState extends State<PublicMapScreen> {
                       child: ListTile(
                         leading: const Icon(Icons.location_on_outlined),
                         title: Text(p.name),
-                        subtitle: Text('${p.municipality} • ${p.commodity}'),
+                        subtitle: Text('${p.municipality} • ${p.program}'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () => details(p),
                       ),
@@ -236,43 +288,4 @@ class _PublicMapScreenState extends State<PublicMapScreen> {
       ),
     ),
   );
-}
-
-class _CoordinateGrid extends CustomPainter {
-  const _CoordinateGrid();
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = const Color(0xFFE7F2F5),
-    );
-    final line = Paint()
-      ..color = const Color(0xFFB3CED5)
-      ..strokeWidth = 1;
-    for (var i = 0; i <= 4; i++) {
-      final x = size.width * i / 4;
-      final y = size.height * i / 4;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), line);
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), line);
-      final label = TextPainter(
-        text: TextSpan(
-          text: '${(10.28 - .06 * i / 4).toStringAsFixed(3)}° N',
-          style: const TextStyle(color: Color(0xFF365A68), fontSize: 10),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      label.paint(canvas, Offset(4, y.clamp(4, size.height - 16)));
-    }
-    final label = TextPainter(
-      text: const TextSpan(
-        text: '123.920° E                         123.980° E   •   N ↑',
-        style: TextStyle(color: Color(0xFF365A68), fontSize: 10),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: size.width - 12);
-    label.paint(canvas, Offset(6, size.height - 30));
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

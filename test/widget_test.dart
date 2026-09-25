@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:assocmap_mobile_app/main.dart';
+import 'package:assocmap_mobile_app/repositories/mock_assoc_repository.dart';
 
 void main() {
   testWidgets('guest can explore published sites without logging in', (
     tester,
   ) async {
-    await tester.pumpWidget(const AssocMapApp());
+    await tester.pumpWidget(AssocMapApp(repository: MockAssocRepository()));
+    await tester.ensureVisible(find.text('Explore public map'));
     await tester.tap(find.text('Explore public map'));
+    await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('2 published locations'),
@@ -30,7 +33,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const AssocMapApp());
+    await tester.pumpWidget(AssocMapApp(repository: MockAssocRepository()));
     await tester.enterText(
       find.byType(TextFormField).at(0),
       'member@assocmap.test',
